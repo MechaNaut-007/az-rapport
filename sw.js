@@ -1,5 +1,5 @@
 const CACHE = 'rapports-v4g2';
-const ASSETS = ['./', './index.html', './manifest.json', './logo.png', './icon-192.png', './icon-512.png'];
+const ASSETS = ['/az-rapport/', '/az-rapport/index.html', '/az-rapport/manifest.json', '/az-rapport/logo.png', '/az-rapport/icon-192.png', '/az-rapport/icon-512.png'];
 self.addEventListener('install', e => {
   e.waitUntil(caches.open(CACHE).then(c => c.addAll(ASSETS)).then(() => self.skipWaiting()));
 });
