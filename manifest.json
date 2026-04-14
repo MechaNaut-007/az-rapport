@@ -2,7 +2,7 @@
   "name": "Rapports d'intervention",
   "short_name": "Rapports",
   "description": "Application de rapports d'intervention technique",
-  "start_url": "/az-rapport/index.html",
+  "start_url": "/index.html",
   "display": "standalone",
   "background_color": "#f4f5f7",
   "theme_color": "#185FA5",
