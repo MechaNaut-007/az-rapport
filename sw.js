@@ -1,4 +1,4 @@
-const CACHE = 'rapports-v4h7';
+const CACHE = 'rapports-v4i';
 const BASE = '/az-rapport';
 const ASSETS = [
   BASE + '/',
