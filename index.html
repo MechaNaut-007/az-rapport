@@ -132,7 +132,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Arial,sans-serif;fo
 
 <div class="view active" id="view-form">
   <div class="rap-header">
-    <div><div class="rap-title">Rapport d'intervention</div><div class="rap-num" id="rap-num"></div></div>
+    <div><div class="rap-title">Rapport d'intervention</div><input class="rap-num" id="rap-num" style="border:none;background:transparent;font-size:12px;color:var(--muted);padding:0;width:140px;font-family:inherit;" placeholder="N° rapport"></div>
     <div class="chk-item" style="background:transparent;border:none;padding:0;">
       <input type="checkbox" id="chk-garantie" style="width:18px;height:18px;accent-color:var(--blue);">
       <label for="chk-garantie" style="font-size:13px;pointer-events:auto;cursor:pointer;">Sous garantie</label>
@@ -422,27 +422,27 @@ function showTab(tab){
   if(tab==='settings')renderSettingsPage();
   document.getElementById('topbar-title').textContent=tab==='form'?'Nouveau rapport':tab==='history'?'Historique':tab==='settings'?'Param\u00e8tres':'Aide';
 }
-function generateRapNum(){
-  const base=todayRap();
+function nextLetter(base){
   let history=[];
   try{history=JSON.parse(localStorage.getItem(SK.history))||[];}catch(e){}
-  // Find all reports from today
-  const todayNums=history
-    .map(r=>r.num||'')
-    .filter(n=>n.includes('N\u00b0 '+base))
-    .map(n=>n.replace('N\u00b0 '+base,''));
-  if(!todayNums.length)return base+'A';
-  // Find highest letter used
-  const letters=todayNums.filter(l=>/^[A-Z]$/.test(l)).sort();
-  if(!letters.length)return base+'A';
+  const nums=history.map(r=>r.num||'')
+    .filter(n=>n.startsWith('N\u00b0 '+base))
+    .map(n=>n.replace('N\u00b0 '+base,'').trim());
+  if(!nums.length)return 'A';
+  const letters=nums.filter(l=>/^[A-Z]$/.test(l)).sort();
+  if(!letters.length)return 'A';
   const last=letters[letters.length-1];
-  const next=String.fromCharCode(last.charCodeAt(0)+1);
-  return base+next;
+  return last==='Z'?'Z':String.fromCharCode(last.charCodeAt(0)+1);
+}
+function generateRapNum(){
+  const base=todayRap();
+  return 'N\u00b0 '+base+nextLetter(base);
 }
 function todayDMY(){const d=new Date();return String(d.getDate()).padStart(2,'0')+'/'+String(d.getMonth()+1).padStart(2,'0')+'/'+d.getFullYear();}
 function todayRap(){const d=new Date();return String(d.getFullYear()).slice(2)+String(d.getMonth()+1).padStart(2,'0')+String(d.getDate()).padStart(2,'0');}
 function initForm(){
-  document.getElementById('rap-num').textContent='N\u00b0 '+generateRapNum();
+  document.getElementById('rap-num').value='N\u00b0 '+generateRapNum();
+  document.getElementById('rap-num').dataset.manual='';
   document.getElementById('date-interv').value=todayDMY();
   rebuildSelects();buildParts();initSigs();initGreekBars();
   if(settings.emailCopie)document.getElementById('email-copie').value=settings.emailCopie;
@@ -452,6 +452,17 @@ function initForm(){
     if(v.length>5)v=v.slice(0,5)+'/'+v.slice(5);
     if(v.length>10)v=v.slice(0,10);
     this.value=v;
+    // Mettre à jour le numéro si date complète et pas modifié manuellement
+    const rapNum=document.getElementById('rap-num');
+    if(!rapNum.dataset.manual && v.length===10){
+      const dd=v.slice(0,2),mm=v.slice(3,5),yyyy=v.slice(6,10);
+      const base=yyyy.slice(2)+mm+dd;
+      rapNum.value='N\u00b0 '+base+nextLetter(base);
+    }
+  });
+  // Marquer le numéro comme manuel si l'utilisateur le modifie
+  document.getElementById('rap-num').addEventListener('input',function(){
+    this.dataset.manual='1';
   });
   document.getElementById('duree-input').addEventListener('input',function(){this.dataset.manual='1';});
 }
@@ -652,7 +663,7 @@ function collectData(){
     });
   }
   return {
-    num:document.getElementById('rap-num').textContent,
+    num:document.getElementById('rap-num').value,
     date:document.getElementById('date-interv').value,
     garantie:document.getElementById('chk-garantie').checked,
     societe:document.getElementById('societe').value,
@@ -829,7 +840,7 @@ function loadRapport(i){
   let history=[];try{history=JSON.parse(localStorage.getItem(SK.history))||[];}catch(e){}
   const d=history[i];if(!d)return;
   if(!confirm('Charger le rapport '+d.num+' ?'))return;
-  document.getElementById('rap-num').textContent=d.num||'';
+  document.getElementById('rap-num').value=d.num||'';document.getElementById('rap-num').dataset.manual='';
   document.getElementById('date-interv').value=d.date||'';
   document.getElementById('chk-garantie').checked=d.garantie||false;
   ['societe','contact','adresse','tel','email-client','email-copie','num-commande','objet','diagnostic','actions','motif-suivre','commentaires','sn','config'].forEach(id=>{
