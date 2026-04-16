@@ -320,7 +320,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Arial,sans-serif;fo
 </div>
 
 <div class="view" id="view-help">
-  <div style="text-align:right;font-size:11px;color:var(--muted);padding:2px 4px 8px 0;">Version <strong style="color:var(--blue);">4p.2</strong></div>
+  <div style="text-align:right;font-size:11px;color:var(--muted);padding:2px 4px 8px 0;">Version <strong style="color:var(--blue);">4p.3</strong></div>
   <div class="card"><div class="card-head">Convertir le rapport en PDF</div><div class="card-body">
   <div style="font-size:13px;line-height:1.8;color:var(--text);">
   <p style="margin-bottom:12px;">Le bouton <strong>PDF</strong> en bas du formulaire g&#233;n&#232;re votre rapport et ouvre la bo&#238;te d'impression. Suivez ces &#233;tapes :</p>
@@ -587,10 +587,15 @@ function insertInto(el,ch){
   el.focus();
 }
 
-function toggleChecklist(){
+function toggleChecklist(forceRebuild){
   const show=document.getElementById('t-prev').checked;
   document.getElementById('card-checklist').classList.toggle('hidden',!show);
-  if(show&&!document.querySelector('#cl-table thead'))buildChecklist();
+  if(show){
+    if(forceRebuild||!document.querySelector('#cl-table thead'))buildChecklist();
+  } else {
+    // Masqué : vider la table pour éviter persistance
+    document.getElementById('cl-table').innerHTML='';
+  }
 }
 function buildChecklist(){
   const tbl=document.getElementById('cl-table');tbl.innerHTML='';
@@ -885,7 +890,14 @@ function loadRapport(i){
   else if(d.statut==='A suivre')document.getElementById('s-suivre').checked=true;
   if(d.types){
     [['install','wrap-install'],['form','wrap-form'],['appli','wrap-appli'],['prev','wrap-prev'],['curat','wrap-curat']].forEach(([k,w])=>setTypeChecked('t-'+k,w,d.types[k]||false));
-    if(d.types.prev)toggleChecklist();
+    // Forcer rebuild checklist (même si une ancienne était affichée)
+    toggleChecklist(true);
+  } else {
+    // Pas de préventif : masquer et vider la checklist
+    document.getElementById('t-prev').checked=false;
+    setTypeChecked('t-prev','wrap-prev',false);
+    document.getElementById('card-checklist').classList.add('hidden');
+    document.getElementById('cl-table').innerHTML='';
   }
   // Restaurer les selects (intervenant, marque, type, modèle)
   const selIntervenant=document.getElementById('intervenant');
