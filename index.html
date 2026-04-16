@@ -320,7 +320,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Arial,sans-serif;fo
 </div>
 
 <div class="view" id="view-help">
-  <div style="text-align:right;font-size:11px;color:var(--muted);padding:2px 4px 8px 0;">Version <strong style="color:var(--blue);">4o</strong></div>
+  <div style="text-align:right;font-size:11px;color:var(--muted);padding:2px 4px 8px 0;">Version <strong style="color:var(--blue);">4p</strong></div>
   <div class="card"><div class="card-head">Convertir le rapport en PDF</div><div class="card-body">
   <div style="font-size:13px;line-height:1.8;color:var(--text);">
   <p style="margin-bottom:12px;">Le bouton <strong>PDF</strong> en bas du formulaire g&#233;n&#232;re votre rapport et ouvre la bo&#238;te d'impression. Suivez ces &#233;tapes :</p>
@@ -816,11 +816,14 @@ function renderHistory(){
   const list=document.getElementById('hist-list');
   let history=[];
   try{history=JSON.parse(localStorage.getItem(SK.history))||[];}catch(e){history=[];}
-  // Trier par date décroissante (savedAt, puis numéro de rapport)
+  // Trier par numéro de rapport décroissant (date intervention), puis savedAt
   history.sort((a,b)=>{
-    const da=a.savedAt||a.num||'';
-    const db=b.savedAt||b.num||'';
-    return db.localeCompare(da);
+    // Extraire la partie date du numéro ex: 'N° 260416A' -> '260416A'
+    const na=(a.num||'').replace('N\u00b0 ','').trim();
+    const nb=(b.num||'').replace('N\u00b0 ','').trim();
+    if(na!==nb)return nb.localeCompare(na);
+    // Même numéro : trier par savedAt
+    return (b.savedAt||'').localeCompare(a.savedAt||'');
   });
   const info=document.getElementById('save-info');
   if(history.length){
