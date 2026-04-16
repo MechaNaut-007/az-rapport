@@ -356,7 +356,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Arial,sans-serif;fo
 
 <div class="bottom-bar" id="bottom-bar">
   <button class="btn" onclick="newRapport()">Nouveau</button>
-  <button class="btn btn-blue" onclick="exportRapport()">&#128444; PDF</button>
+  <button class="btn btn-blue" onclick="exportRapport()">&#128196; G&#233;n&#233;rer</button>
   <button class="btn btn-send" onclick="sendEmail()">&#9993; Envoyer</button>
 </div>
 
@@ -422,10 +422,27 @@ function showTab(tab){
   if(tab==='settings')renderSettingsPage();
   document.getElementById('topbar-title').textContent=tab==='form'?'Nouveau rapport':tab==='history'?'Historique':tab==='settings'?'Param\u00e8tres':'Aide';
 }
+function generateRapNum(){
+  const base=todayRap();
+  let history=[];
+  try{history=JSON.parse(localStorage.getItem(SK.history))||[];}catch(e){}
+  // Find all reports from today
+  const todayNums=history
+    .map(r=>r.num||'')
+    .filter(n=>n.includes('N\u00b0 '+base))
+    .map(n=>n.replace('N\u00b0 '+base,''));
+  if(!todayNums.length)return base+'A';
+  // Find highest letter used
+  const letters=todayNums.filter(l=>/^[A-Z]$/.test(l)).sort();
+  if(!letters.length)return base+'A';
+  const last=letters[letters.length-1];
+  const next=String.fromCharCode(last.charCodeAt(0)+1);
+  return base+next;
+}
 function todayDMY(){const d=new Date();return String(d.getDate()).padStart(2,'0')+'/'+String(d.getMonth()+1).padStart(2,'0')+'/'+d.getFullYear();}
 function todayRap(){const d=new Date();return String(d.getFullYear()).slice(2)+String(d.getMonth()+1).padStart(2,'0')+String(d.getDate()).padStart(2,'0');}
 function initForm(){
-  document.getElementById('rap-num').textContent='N\u00b0 '+todayRap()+'A';
+  document.getElementById('rap-num').textContent='N\u00b0 '+generateRapNum();
   document.getElementById('date-interv').value=todayDMY();
   rebuildSelects();buildParts();initSigs();initGreekBars();
   if(settings.emailCopie)document.getElementById('email-copie').value=settings.emailCopie;
@@ -691,7 +708,7 @@ function generateHTML(d){
   let clHTML='';
   if(d.checklist.length>0){
     const done=d.checklist.filter(r=>r.ok).length;
-    const rows=d.checklist.map(r=>'<tr><td style="font-size:11px;font-weight:'+(r.sous?'700':'400')+';color:'+(r.sous?'#222':'#555')+';">'+esc(r.sous)+'</td><td style="font-size:11px;">'+esc(r.test)+'</td><td style="text-align:center;">'+(r.ok?'&#9745;':'&#9744;')+'</td><td style="font-size:11px;">'+esc(r.rem)+'</td><td style="text-align:center;font-size:10px;color:#888;">'+esc(r.num)+'</td></tr>').join('');
+    const rows=d.checklist.map(r=>'<tr style="border-bottom:0.5px solid #e0e0e0;"><td style="font-size:11px;font-weight:'+(r.sous?'700':'400')+';color:'+(r.sous?'#222':'#555')+';padding:5px 6px;">'+esc(r.sous)+'</td><td style="font-size:11px;padding:5px 6px;">'+esc(r.test)+'</td><td style="text-align:center;padding:5px 6px;">'+(r.ok?'&#9745;':'&#9744;')+'</td><td style="font-size:11px;padding:5px 6px;">'+esc(r.rem)+'</td><td style="text-align:center;font-size:10px;color:#888;padding:5px 6px;">'+esc(r.num)+'</td></tr>').join('');
     clHTML='<div class="section"><div class="sh">Checklist maintenance pr\u00e9ventive \u2014 '+done+' / '+d.checklist.length+' valid\u00e9s</div><div style="padding:0;"><table style="width:100%;border-collapse:collapse;"><thead><tr style="background:#f0f0f0;"><th style="border:1px solid #bbb;padding:4px 6px;width:90px;font-size:10px;">Sous-ensemble</th><th style="border:1px solid #bbb;padding:4px 6px;font-size:10px;">Test</th><th style="border:1px solid #bbb;padding:4px 6px;width:50px;text-align:center;font-size:10px;">Valid\u00e9</th><th style="border:1px solid #bbb;padding:4px 6px;width:32%;font-size:10px;">Remarque</th><th style="border:1px solid #bbb;padding:4px 6px;width:60px;text-align:center;font-size:10px;">N\u00b0</th></tr></thead><tbody>'+rows+'</tbody></table></div></div>';
   }
   const partsHTML=d.parts.length?'<div class="section"><div class="sh">Pi\u00e8ces d\u00e9tach\u00e9es</div><div class="sb"><table style="width:100%;border-collapse:collapse;font-size:11px;"><tr><th style="border:1px solid #bbb;padding:4px 6px;">#</th><th style="border:1px solid #bbb;padding:4px 6px;">R\u00e9f\u00e9rence</th><th style="border:1px solid #bbb;padding:4px 6px;">Description</th><th style="border:1px solid #bbb;padding:4px 6px;">Qt\u00e9</th></tr>'+d.parts.map(p=>'<tr><td style="border:1px solid #ddd;padding:4px 6px;">'+p.n+'</td><td style="border:1px solid #ddd;padding:4px 6px;">'+esc(p.ref)+'</td><td style="border:1px solid #ddd;padding:4px 6px;">'+esc(p.desc)+'</td><td style="border:1px solid #ddd;padding:4px 6px;">'+esc(p.qty)+'</td></tr>').join('')+'</table></div></div>':'';
@@ -763,10 +780,7 @@ function sendEmail(){
   );
   let mailto='mailto:'+to+'?subject='+subject+'&body='+body;
   if(cc)mailto+='&cc='+encodeURIComponent(cc);
-  // Generate file first, then open mail
-  exportRapport().then(()=>{
-    setTimeout(()=>{ window.location.href=mailto; },800);
-  });
+  window.location.href=mailto;
 }
 
 // SAVE / HISTORY
@@ -776,7 +790,7 @@ function saveRapport(){
   try{history=JSON.parse(localStorage.getItem(SK.history))||[];}catch(e){history=[];}
   const idx=history.findIndex(r=>r.num===d.num);
   if(idx>=0)history[idx]=d;else history.unshift(d);
-  if(history.length>50)history=history.slice(0,50);
+  if(history.length>200)history=history.slice(0,200);
   try{
     localStorage.setItem(SK.history,JSON.stringify(history));
     showToast('\u2713 Rapport '+d.num+' sauvegard\u00e9 ('+history.length+' en m\u00e9moire)');
