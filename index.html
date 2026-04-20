@@ -320,7 +320,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Arial,sans-serif;fo
 </div>
 
 <div class="view" id="view-help">
-  <div style="text-align:right;font-size:11px;color:var(--muted);padding:2px 4px 8px 0;">Version <strong style="color:var(--blue);">4p.4</strong></div>
+  <div style="text-align:right;font-size:11px;color:var(--muted);padding:2px 4px 8px 0;">Version <strong style="color:var(--blue);">4p.5</strong></div>
   <div class="card"><div class="card-head">Convertir le rapport en PDF</div><div class="card-body">
   <div style="font-size:13px;line-height:1.8;color:var(--text);">
   <p style="margin-bottom:12px;">Le bouton <strong>PDF</strong> en bas du formulaire g&#233;n&#232;re votre rapport et ouvre la bo&#238;te d'impression. Suivez ces &#233;tapes :</p>
@@ -641,7 +641,7 @@ function buildParts(){
 }
 function initSigs(){
   ['sig-client','sig-interv'].forEach(id=>{
-    const c=document.getElementById(id);c.width=c.offsetWidth||320;c.height=80;
+    const c=document.getElementById(id);c.width=320;c.height=80;
     const ctx=c.getContext('2d');let drawing=false,lx,ly;
     function pos(e){const r=c.getBoundingClientRect();const s=e.touches?e.touches[0]:e;return[(s.clientX-r.left)*(c.width/r.width),(s.clientY-r.top)*(c.height/r.height)];}
     c.addEventListener('mousedown',e=>{drawing=true;[lx,ly]=pos(e);});
@@ -652,7 +652,8 @@ function initSigs(){
     c.addEventListener('touchend',()=>drawing=false);
   });
 }
-function clearSig(id){const c=document.getElementById(id);c.getContext('2d').clearRect(0,0,c.width,c.height);}
+function clearSig(id){const c=document.getElementById(id);if(!c)return;c.getContext('2d').clearRect(0,0,c.width,c.height);}
+function clearAllSigs(){clearSig('sig-client');clearSig('sig-interv');}
 
 function collectData(){
   const fact=document.getElementById('chk-facturation').checked;
@@ -706,8 +707,8 @@ function collectData(){
     commentaires:document.getElementById('commentaires').value,
     nomClient:document.getElementById('nom-client').value,
     nomInterv:document.getElementById('nom-interv').value,
-    sigClient:document.getElementById('sig-client').toDataURL(),
-    sigInterv:document.getElementById('sig-interv').toDataURL(),
+    sigClient:(()=>{const cv=document.getElementById('sig-client');return(cv&&cv.width>10&&cv.height>10)?cv.toDataURL():'';})(),
+    sigInterv:(()=>{const cv=document.getElementById('sig-interv');return(cv&&cv.width>10&&cv.height>10)?cv.toDataURL():'';})(),
     savedAt:new Date().toISOString(),
   };
 }
@@ -944,15 +945,24 @@ function loadRapport(i){
       updateBadge();
     },100);
   }
+  // Effacer les canvas avant restauration (évite persistance entre rapports)
+  clearAllSigs();
   // Restaurer les signatures
   function restoreSig(canvasId, dataUrl){
     const canvas=document.getElementById(canvasId);
     if(!canvas)return;
+    // S'assurer que le canvas a une taille valide
+    if(!canvas.width||canvas.width<10)canvas.width=320;
+    if(!canvas.height||canvas.height<10)canvas.height=80;
     const ctx=canvas.getContext('2d');
     ctx.clearRect(0,0,canvas.width,canvas.height);
     if(!dataUrl||dataUrl==='data:,'||dataUrl.length<50)return;
     const img=new Image();
-    img.onload=()=>ctx.drawImage(img,0,0,canvas.width,canvas.height);
+    img.onload=()=>{
+      ctx.clearRect(0,0,canvas.width,canvas.height);
+      ctx.drawImage(img,0,0,canvas.width,canvas.height);
+    };
+    img.onerror=()=>console.warn('Erreur chargement signature',canvasId);
     img.src=dataUrl;
   }
   restoreSig('sig-client',d.sigClient);
